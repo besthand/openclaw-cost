@@ -1,0 +1,5 @@
+{
+  "name": "OpenClaw 建置成本分析",
+  "description": "比較購買 Mac Mini 自行部署與雲端 API (Claude, Gemini)、VPS 的長期投資效益與回本時間",
+  "requestFramePermissions": []
+}
