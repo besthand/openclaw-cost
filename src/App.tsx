@@ -15,7 +15,7 @@ import {
   Legend,
   Cell,
 } from 'recharts';
-import { Settings, Calculator, Zap, DollarSign } from 'lucide-react';
+import { Settings, Calculator, Zap, DollarSign, Search, Filter } from 'lucide-react';
 
 const MAC_MINI_MODELS = [
   { id: 'm4-10c-16-256', name: 'M4 (10核CPU) 16GB / 256GB', price: 19900 },
@@ -57,6 +57,7 @@ const API_PRICING = [
 
 ];
 
+const VENDORS = Array.from(new Set(API_PRICING.map(api => api.id.split('/')[0])));
 const VPS_COST_USD = 10;
 const EXCHANGE_RATE = 32;
 
@@ -64,6 +65,8 @@ export default function App() {
   const [selectedModelId, setSelectedModelId] = useState(MAC_MINI_MODELS[0].id);
   const [tokensPerMonth, setTokensPerMonth] = useState(60); // in 10k (萬)
   const [inputRatio, setInputRatio] = useState(75); // percentage
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedVendors, setSelectedVendors] = useState<string[]>(VENDORS);
 
   const selectedModel = MAC_MINI_MODELS.find((m) => m.id === selectedModelId)!;
 
@@ -73,7 +76,14 @@ export default function App() {
     const outputRatioDec = 1 - inputRatioDec;
     const vpsMonthlyTWD = VPS_COST_USD * EXCHANGE_RATE;
 
-    const apiCosts = API_PRICING.map((api) => {
+    const filteredAPIs = API_PRICING.filter(api => {
+      const vendor = api.id.split('/')[0];
+      const matchesVendor = selectedVendors.includes(vendor);
+      const matchesSearch = api.name.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesVendor && matchesSearch;
+    });
+
+    const apiCosts = filteredAPIs.map((api) => {
       const blendedCostPerM = api.input * inputRatioDec + api.output * outputRatioDec;
       const apiMonthlyUSD = tokensInMillions * blendedCostPerM;
       const apiMonthlyTWD = apiMonthlyUSD * EXCHANGE_RATE;
@@ -89,7 +99,7 @@ export default function App() {
     });
 
     return apiCosts;
-  }, [tokensPerMonth, inputRatio, selectedModel.price]);
+  }, [tokensPerMonth, inputRatio, selectedModel.price, selectedVendors, searchTerm]);
 
   const chartData = costs.map((c) => ({
     name: c.name,
@@ -114,7 +124,7 @@ export default function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Controls Panel */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4 space-y-6 sticky top-6 self-start max-h-[calc(100vh-3rem)] overflow-y-auto pr-2 pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#444 #141414' }}>
             <div className="bg-[#1C1C1C] rounded-xl p-6 border border-[#333] shadow-lg">
               <div className="flex items-center gap-2 mb-6 text-white">
                 <Settings className="w-5 h-5 text-[#F27D26]" />
@@ -186,6 +196,47 @@ export default function App() {
                 <div className="flex justify-between text-xs text-[#666] font-mono">
                   <span>多數輸出</span>
                   <span>多數輸入</span>
+                </div>
+              </div>
+
+              {/* Filter Section */}
+              <div className="space-y-4 pt-6 mt-6 border-t border-[#333]">
+                <div className="flex items-center gap-2 text-white mb-4">
+                  <Filter className="w-4 h-4 text-[#34A853]" />
+                  <h3 className="text-sm font-medium uppercase tracking-wider">模型篩選</h3>
+                </div>
+                
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-[#8E9299]" />
+                  <input
+                    type="text"
+                    placeholder="搜尋模型名稱..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-[#2A2A2A] border border-[#444] rounded-lg pl-9 pr-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#34A853] transition-all"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {VENDORS.map(vendor => (
+                    <button
+                      key={vendor}
+                      onClick={() => {
+                        setSelectedVendors(prev => 
+                          prev.includes(vendor) 
+                            ? prev.filter(v => v !== vendor)
+                            : [...prev, vendor]
+                        )
+                      }}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
+                        selectedVendors.includes(vendor)
+                          ? 'bg-[#34A853]/20 border-[#34A853] text-[#34A853]'
+                          : 'bg-[#2A2A2A] border-[#444] text-[#8E9299] hover:border-[#666]'
+                      }`}
+                    >
+                      {vendor.charAt(0).toUpperCase() + vendor.slice(1)}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
